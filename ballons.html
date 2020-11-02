@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Balloons</title>
+</head>
+<style>
+	* {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overflow: hidden;
+}
+
+body {
+  position: relative;
+}
+
+</style>
+<body>
+<script>
+
+
+class Tool {
+  // random number.
+  static randomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+  // random color rgb.
+  static randomColorRGB() {
+    return (
+      "rgb(" +
+      this.randomNumber(0, 255) +
+      ", " +
+      this.randomNumber(0, 255) +
+      ", " +
+      this.randomNumber(0, 255) +
+      ")"
+    );
+  }
+  // random color hsl.
+  static randomColorHSL(saturation, lightness) {
+    return (
+      "hsl(" +
+      this.randomNumber(0, 360) +
+      ", " +
+      saturation +
+      "%, " +
+      lightness +
+      "%)"
+    );
+  }
+  // gradient color.
+  static gradientColor(ctx, cr, cg, cb, ca, x, y, r) {
+    const col = cr + "," + cg + "," + cb;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(" + col + ", " + (ca * 1) + ")");
+    g.addColorStop(0.5, "rgba(" + col + ", " + (ca * 0.5) + ")");
+    g.addColorStop(1, "rgba(" + col + ", " + (ca * 0) + ")");
+    return g;
+  }
+}
+
+/*
+  When want to use angle.
+*/
+
+class Angle {
+  constructor(angle) {
+    this.a = angle;
+    this.rad = this.a * Math.PI / 180;
+  }
+
+  incDec(num) {
+    this.a += num;
+    this.rad = this.a * Math.PI / 180;
+    return this.rad;
+  }
+}
+
+/*
+  When want to use controller.
+*/
+
+class Controller {
+  constructor(id) {
+    this.id = document.getElementById(id);
+  }
+  getVal() {
+    return this.id.value;
+  }
+}
+
+/*
+  When want to use time.
+*/
+
+class Time {
+  constructor(time) {
+    this.startTime = time;
+    this.lastTime;
+    this.elapsedTime;
+  }
+
+  getElapsedTime() {
+    this.lastTime = Date.now();
+    this.elapsedTime = (this.startTime - this.lastTime) * -1;
+    return this.elapsedTime;
+  }
+}
+
+/*
+  When want to use vector.
+*/
+
+class Vector2d {
+  constructor(x, y) {
+    this.vx = x;
+    this.vy = y;
+  }
+
+  scale(scale) {
+    this.vx *= scale;
+    this.vy *= scale;
+  }
+
+  add(vec2) {
+    this.vx += vec2.vx;
+    this.vy += vec2.vy
+  }
+
+  sub(vec2) {
+    this.vx -= vec2.vx;
+    this.vy -= vec2.vy;
+  }
+
+  negate() {
+    this.vx = -this.vx;
+    this.vy = -this.vy;
+  }
+
+  length() {
+    return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+  }
+
+  lengthSquared() {
+    return this.vx * this.vx + this.vy * this.vy;
+  }
+
+  normalize() {
+    let len = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (len) {
+      this.vx /= len;
+      this.vy /= len;
+    }
+    return len;
+  }
+
+  rotate(angle) {
+    let vx = this.vx;
+    let vy = this.vy;
+    let cosVal = Math.cos(angle);
+    let sinVal = Math.sin(angle);
+    this.vx = vx * cosVal - vy * sinVal;
+    this.vy = vx * sinVal + vy * cosVal;
+  }
+
+  toString() {
+    return '(' + this.vx.toFixed(3) + ',' + this.vy.toFixed(3) + ')';
+  }
+}
+
+let canvas;
+
+class Canvas {
+  constructor(bool) {
+    // create canvas.
+    this.canvas = document.createElement("canvas");
+    // if on screen.
+    if (bool === true) {
+      this.canvas.style.display = 'block';
+      this.canvas.style.top = 0;
+      this.canvas.style.left = 0;
+      document.getElementsByTagName("body")[0].appendChild(this.canvas);
+    }
+    this.ctx = this.canvas.getContext("2d");
+    this.width = this.canvas.width = window.innerWidth;
+    this.height = this.canvas.height = window.innerHeight;
+    // mouse infomation.
+    this.mouseX = null;
+    this.mouseY = null;
+    this.mouseZ = null;
+    // ball
+    this.ballNum = 36;
+    this.balls = [];
+    this.clearId = [];
+  }
+  
+  // init, render, resize
+  init() {
+    let that = this;
+    let p = Promise.resolve();
+    for (let i = 1; i < this.ballNum + 1; i++) {
+      p = p
+      .then(function() {
+        return new Promise(function(res, rej) {
+          that.clearId.push(setTimeout(function() {
+            const b = new Ball(that.ctx, that.width - that.width / that.ballNum * i, that.height / 2 + 5 * i, 2 * i, i * 20);
+            that.balls.push(b);
+          }, i * 100));
+          res();
+        });
+      });
+    }
+  }
+
+  render() {
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    for (let i = 0; i < this.balls.length; i++) {
+      this.balls[i].render();
+    }
+  }
+  
+  resize() {
+    this.width = this.canvas.width = window.innerWidth;
+    this.height = this.canvas.height = window.innerHeight;
+    this.balls = [];
+    for (let i = 0; i < this.clearId.length; i++) {
+      clearTimeout(this.clearId[i]);
+    }
+    this.init();
+  }
+}
+
+/*
+  Ball class.
+*/
+
+class Ball {
+  constructor(ctx, x, y, r, i) {
+    this.ctx = ctx;
+    this.init(x, y, r, i);
+  }
+
+  init(x, y, r, i) {
+    this.t = new Time(new Date());
+    this.ratio = i / 10 / 10;
+    this.x = x;
+    this.xi = x;
+    this.y = 0;
+    this.yi = y;
+    this.r = r;
+    this.i = i;
+    this.lw = this.r / 50;
+    this.a = new Angle(this.i);
+    this.v = new Vector2d(0, 0);
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineWidth = this.lw;
+    ctx.strokeStyle = 'hsl(' + Math.sin(this.a.rad / 5) * 360 + ', 80%, 60%)';
+    ctx.fillStyle = 'hsl(' + Math.sin(this.a.rad / 5) * 360 + ', 80%, 60%)';
+    ctx.translate(this.x, 0);
+    ctx.rotate(0.05 * this.ratio * Math.sin(this.a.rad));
+    ctx.translate(-this.x, 0);
+    ctx.beginPath();
+    ctx.moveTo(this.xi, 0);
+    ctx.quadraticCurveTo(Math.sin(this.a.rad) * 30 + this.xi, this.y / 2, this.x, this.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
+    ctx.fill();
+    ctx.stroke();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'hsl(' + Math.sin(this.a.rad / 5) * 360 + ', 80%, 80%)';
+    ctx.lineWidth = this.lw * 10;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r * 0.7, Math.PI * 1.1, Math.PI * 1.4, false);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    this.dropShadow();
+    ctx.restore();
+  }
+
+  dropShadow() {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.fillStyle = 'hsl(' + Math.sin(this.a.rad / 5) * 360 + ', 80%, 60%)';
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(Math.sin(-this.a.rad) * 30 * this.ratio + this.x, this.y + 100 * this.ratio / 5, this.r, this.r / 20, 0, Math.PI * 2, false);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  elasticity() {
+    this.v.vy += (this.yi - this.y) * 0.3;
+    this.v.vy *= 0.5;
+    this.y += this.v.vy;
+  }
+  
+  render() {
+    this.draw();
+    this.elasticity();
+    this.a.incDec(1);
+  }
+}
+
+(function () {
+  "use strict";
+  window.addEventListener("load", function () {
+    canvas = new Canvas(true);
+    canvas.init();
+    
+    function render() {
+      window.requestAnimationFrame(function () {
+        canvas.render();
+        render();
+      });
+    }
+    
+    render();
+
+    // event
+    window.addEventListener("resize", function () {
+      canvas.resize();
+    }, false);
+
+  });
+})();
+</script>
+</body>
+</html>
